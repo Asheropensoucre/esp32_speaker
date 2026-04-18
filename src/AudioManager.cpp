@@ -1,5 +1,6 @@
 #include "AudioManager.h"
 #include "esp_a2dp_api.h"
+#include "esp_avrc_api.h"
 
 // Static member initialization
 AudioManager* AudioManager::instance = nullptr;
@@ -22,6 +23,36 @@ void AudioManager::begin() {
   
   // Set up AVRCP metadata callback
   a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
+  
+  // Set up AVRC playback status callback to sync with phone
+  a2dp_sink.set_avrc_rn_playstatus_callback([](esp_avrc_playback_stat_t status) {
+    Serial.print("AVRC Playback Status Callback - Status: ");
+    Serial.println(status);
+    if (AudioManager::instance) {
+      if (status == ESP_AVRC_PLAYBACK_PLAYING) {
+        Serial.println("Phone State: PLAYING");
+        AudioManager::instance->playing = true;
+      } else if (status == ESP_AVRC_PLAYBACK_PAUSED || status == ESP_AVRC_PLAYBACK_STOPPED) {
+        Serial.println("Phone State: PAUSED/STOPPED");
+        AudioManager::instance->playing = false;
+      }
+    }
+  });
+  
+  // Set up Bluetooth connection callback
+  a2dp_sink.set_on_connection_state_changed([](esp_a2d_connection_state_t state, void* param) {
+    Serial.print("Bluetooth Connection State: ");
+    Serial.println(state);
+    if (AudioManager::instance) {
+      if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
+        Serial.println("Phone CONNECTED");
+        AudioManager::instance->connected = true;
+      } else {
+        Serial.println("Phone DISCONNECTED");
+        AudioManager::instance->connected = false;
+      }
+    }
+  });
 }
 
 void AudioManager::start(const char* deviceName) {
@@ -65,14 +96,7 @@ bool AudioManager::isPlaying() {
 }
 
 bool AudioManager::isConnected() {
-  // Check if Bluetooth sink is connected and ready
-  // We'll use a simple heuristic: if we've been started and have a device name,
-  // assume we're connected. In a real implementation, we'd check the actual
-  // connection state from the Bluetooth stack.
-  
-  // For now, return true to allow audio commands to be attempted
-  // The a2dp_sink methods will handle the actual connection state internally
-  return true;
+  return connected;
 }
 
 BluetoothA2DPSink* AudioManager::getSink() {
@@ -81,9 +105,12 @@ BluetoothA2DPSink* AudioManager::getSink() {
 
 // Static callback function for AVRCP metadata
 void AudioManager::avrc_metadata_callback(uint8_t id, const uint8_t *text) {
+  Serial.print("AVRCP Metadata Callback - ID: ");
+  Serial.println(id);
   if (instance && instance->displayManager) {
     if (id == ESP_AVRC_MD_ATTR_TITLE) {
-      // Update the display with the new song title
+      Serial.print("Song Title Received: ");
+      Serial.println((char*)text);
       instance->displayManager->updateSongTitle((char*)text);
     }
   }

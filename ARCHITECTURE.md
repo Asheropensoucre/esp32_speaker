@@ -3,7 +3,7 @@
 ## Project Overview
 This is an ESP32-based Bluetooth audio receiver with display and physical controls ("Sir Potato OS"). It streams audio via Bluetooth A2DP, displays song information on a TFT screen, and provides physical buttons for playback control and volume adjustment.
 
-**Current Status:** Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅
+**Current Status:** Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅
 
 ---
 
@@ -177,6 +177,13 @@ InputManager inputManager;
     - **Order:** displayManager.begin() → delay(50ms) → inputManager.begin()
     - **Backup:** Added `-D TFT_MISO=-1` to platformio.ini as additional safety measure
     - **Status:** ✅ FIXED - Do NOT change initialization order or Button X will break again
+
+17. **Bluetooth Connection State Tracking (CRITICAL)**: Auto-sync must only activate when phone is connected
+    - **Problem:** UI would sync before phone connected, causing erratic behavior in PAIRING state
+    - **Solution:** Use `set_on_connection_state_changed()` callback to track connection state
+    - **Implementation:** Wrap auto-sync block with `if (audioManager->isConnected())` guard
+    - **Callbacks:** Listen for ESP_A2DP_CONNECTION_STATE_CONNECTED and disconnection events
+    - **Status:** ✅ FIXED - Auto-sync now respects connection state transitions
 
 ---
 
@@ -369,4 +376,4 @@ The screen is divided into 3 zones:
 ---
 
 *Last Updated: 2026-04-19*
-*Phase 5 Complete: Button X GPIO 19 SPI conflict resolved via initialization order*
+*Phase 6 Complete: Bluetooth State Machine & Phone Sync - Auto-sync tracks phone connections*

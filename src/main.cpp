@@ -68,6 +68,45 @@ void setup() {
 void loop() {
   inputManager.update();
   
+  // Auto-Sync phone state with visual state (only if connected)
+  if (audioManager->isConnected()) {
+    static bool lastPhonePlayState = false;
+    static int lastPhoneVolume = -1;
+    bool currentPhonePlayState = audioManager->isPlaying();
+    int currentPhoneVolume = audioManager->getVolume();
+
+    if (currentPhonePlayState != lastPhonePlayState) {
+      Serial.print("Auto-Sync: Play state changed from ");
+      Serial.print(lastPhonePlayState);
+      Serial.print(" to ");
+      Serial.println(currentPhonePlayState);
+      lastPhonePlayState = currentPhonePlayState;
+      
+      if (currentPhonePlayState && stateManager.getState() != PLAYING) {
+        Serial.println("Syncing to PLAYING state");
+        stateManager.setState(PLAYING);
+        displayManager.showOverlay("PLAYING", COLOR_KAWAII_PINK);
+        displayManager.drawFullDisplay();
+      } 
+      else if (!currentPhonePlayState && stateManager.getState() == PLAYING) {
+        Serial.println("Syncing to PAUSED state");
+        stateManager.setState(PAUSED);
+        displayManager.showOverlay("PAUSED", COLOR_KAWAII_TEAL);
+        displayManager.drawFullDisplay();
+      }
+    }
+
+    if (currentPhoneVolume != lastPhoneVolume) {
+      Serial.print("Auto-Sync: Volume changed from ");
+      Serial.print(lastPhoneVolume);
+      Serial.print(" to ");
+      Serial.println(currentPhoneVolume);
+      lastPhoneVolume = currentPhoneVolume;
+      displayManager.showOverlay("VOL SYNC", COLOR_KAWAII_YELLOW);
+      displayManager.drawFullDisplay();
+    }
+  }
+  
   // Update animations
   unsigned long currentTime = millis();
   if (currentTime - lastAnimationUpdate >= ANIMATION_SPEED) {

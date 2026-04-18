@@ -75,6 +75,9 @@ We specifically avoid ESP32 strapping pins (like D2, D5) to prevent boot loops a
 - Channels: Stereo
 - Amplifier: Must be enabled (GPIO 14 HIGH)
 - Bluetooth: A2DP sink with AVRCP support
+- Connection State: Tracked via `set_on_connection_state_changed()` callback
+- Auto-Sync: Enabled only when phone is connected (guards in main loop)
+- Phone State Sync: Automatic PLAYING/PAUSED/volume sync when connected
 
 ---
 
@@ -210,6 +213,22 @@ lib_deps =
 4. Verify edge detection logic (LOW->HIGH transition)
 5. Check isButtonXPressed() flag handling
 
+### UI Out of Sync with Phone (Bluetooth State Mismatch)
+**Root Cause:** ESP32 state machine wasn't tracking phone state changes from Bluetooth callbacks
+**Solution:** Enable Bluetooth connection state tracking and auto-sync:
+1. Use `set_on_connection_state_changed()` callback to track connection state
+2. Wrap auto-sync block with `if (audioManager->isConnected())` guard
+3. Auto-sync only triggers when phone is actually connected
+4. Callbacks fire for play/pause changes from phone
+5. Volume sync detects phone volume changes
+
+**If auto-sync not working:**
+1. Check serial monitor for "Bluetooth Connection State" messages
+2. Verify "Phone CONNECTED" message appears when phone connects
+3. Confirm auto-sync logs only appear after connection
+4. Check AVRC callbacks are enabled in AudioManager::begin()
+5. Verify play state boolean is updated by callbacks
+
 ### Screen Flickering
 1. Check lastDrawnState tracking is implemented
 2. Only call fillScreen() when state changes
@@ -254,4 +273,4 @@ lib_deps =
 ---
 
 *Last Updated: 2026-04-19*
-*Phase 5 Complete: Button X GPIO 19 SPI conflict resolved via initialization order*
+*Phase 6 Complete: Bluetooth State Machine & Phone Sync - Auto-sync now tracks phone connections*

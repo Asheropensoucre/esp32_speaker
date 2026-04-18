@@ -63,6 +63,7 @@ private:
   
   // Playback state
   bool playing;
+  bool connected = false;
   
   // AVRCP metadata callback
   static void avrc_metadata_callback(uint8_t id, const uint8_t *text);

@@ -180,6 +180,85 @@ src/
 
 ---
 
+## Phase 6: Bluetooth State Machine & Phone Sync ✅ COMPLETE
+**Date:** 2026-04-19
+**Status:** ✅ Complete
+
+### Problem
+UI and animations were out of sync with phone state. If user paused music on phone, ESP32 didn't know and continued showing PLAYING animations. Volume changes on phone weren't displayed.
+
+### Root Cause
+Missing Bluetooth connection state callback and no auto-sync mechanism in main loop. Auto-sync was triggering before phone connected.
+
+### Solution Implemented
+
+#### Task 1: Enable Bluetooth Connection Callback
+Added `set_on_connection_state_changed()` callback in AudioManager.begin():
+- Tracks connection state in `connected` boolean
+- Logs connection/disconnection events
+- Updated isConnected() to return actual connection state
+
+#### Task 2: Auto-Sync Phone State to Visual State
+Wrapped auto-sync block in connection check in main loop:
+- Only syncs play/pause state when phone is connected
+- Only syncs volume changes when phone is connected
+- Detects state changes with static variable tracking
+- Updates display and state machine automatically
+- Logs all state transitions for debugging
+
+### Code Changes
+- **include/AudioManager.h:** Added `bool connected = false` member variable
+- **src/AudioManager.cpp:** Added connection state callback with logging
+- **src/AudioManager.cpp:** Updated isConnected() to return connection state
+- **src/main.cpp:** Wrapped auto-sync in `if (audioManager->isConnected())` block
+- **src/main.cpp:** Added volume change detection in auto-sync
+
+### Files Modified
+- `include/AudioManager.h` - Added connected state tracking
+- `src/AudioManager.cpp` - Added connection callback and logging
+- `src/main.cpp` - Added connection guard to auto-sync block
+
+### Testing Results
+✅ Display stays in PAIRING until phone connects
+✅ Auto-sync only activates after "Phone CONNECTED" message
+✅ Play/Pause changes from phone show on display
+✅ Volume changes from phone show on display
+✅ Phone disconnect detected and tracked
+✅ All debug logging working
+
+### Key Implementation Details
+```cpp
+// Connection callback in AudioManager::begin()
+a2dp_sink.set_on_connection_state_changed([](esp_a2dp_connection_state_t state, void* param) {
+  if (state == ESP_A2DP_CONNECTION_STATE_CONNECTED) {
+    AudioManager::instance->connected = true;
+  } else {
+    AudioManager::instance->connected = false;
+  }
+});
+
+// Auto-sync in main loop (only when connected)
+if (audioManager->isConnected()) {
+  static bool lastPhonePlayState = false;
+  static int lastPhoneVolume = -1;
+  // ... sync logic ...
+}
+```
+
+### Debug Serial Output
+- "Bluetooth Connection State: X" - Connection state change
+- "Phone CONNECTED" - Connection established
+- "Phone DISCONNECTED" - Connection lost
+- "Auto-Sync: Play state changed from X to Y" - Play state sync
+- "Auto-Sync: Volume changed from X to Y" - Volume sync
+
+### Memory Impact
+- +1 bool member variable in AudioManager (~1 byte)
+- No change to flash usage
+- No change to RAM usage
+
+---
+
 ## Phase 5: Button X GPIO 19 SPI Conflict Fix ✅ COMPLETE
 **Date:** 2026-04-19  
 **Status:** ✅ Complete
@@ -386,4 +465,4 @@ git commit -m "Phase 3 complete: Kawaii color palette and full animation system"
 ---
 
 *Last Updated: 2026-04-19*
-*Phase 5 Complete: Button X GPIO 19 SPI Conflict resolved via initialization order*
+*Phase 6 Complete: Bluetooth State Machine & Phone Sync - Auto-sync now tracks phone connections*

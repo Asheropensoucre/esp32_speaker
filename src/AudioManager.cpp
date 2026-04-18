@@ -22,17 +22,6 @@ void AudioManager::begin() {
   
   // Set up AVRCP metadata callback
   a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
-  
-  // Set up AVRCP playback status callback
-  a2dp_sink.set_avrc_rn_playstatus_callback([](esp_avrc_playback_stat_t status) {
-      if (AudioManager::instance) {
-          if (status == ESP_AVRC_PLAYBACK_PLAYING) {
-              AudioManager::instance->playing = true;
-          } else if (status == ESP_AVRC_PLAYBACK_PAUSED || status == ESP_AVRC_PLAYBACK_STOPPED) {
-              AudioManager::instance->playing = false;
-          }
-      }
-  });
 }
 
 void AudioManager::start(const char* deviceName) {

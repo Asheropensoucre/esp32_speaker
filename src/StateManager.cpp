@@ -1,4 +1,5 @@
 #include "StateManager.h"
+#include <Arduino.h>
 
 // Animation frame sequences (0-indexed)
 const int StateManager::bootSequence[] = {0, 6, 13, 15};  // Frames 1, 7, 14, 16
@@ -21,6 +22,10 @@ SystemState StateManager::getState() {
 
 void StateManager::setState(SystemState newState) {
   currentState = newState;
+  
+  // Debug output
+  Serial.print("State changed to: ");
+  Serial.println(getStateName());
   
   // Set appropriate animation for the new state
   switch (newState) {
@@ -127,6 +132,16 @@ void StateManager::advanceAnimationFrame() {
   }
   
   animationStep++;
+  
+  // Debug output for first frame of each animation cycle
+  if (animationStep == 0 || animationStep == length) {
+    Serial.print("Animation: ");
+    Serial.print(currentAnimation);
+    Serial.print(" Frame: ");
+    Serial.print(animationStep);
+    Serial.print("/");
+    Serial.println(length);
+  }
   
   // Check if animation is complete
   if (animationStep >= length) {

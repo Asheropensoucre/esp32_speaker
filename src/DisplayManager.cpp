@@ -209,8 +209,8 @@ void DisplayManager::drawCustomChar(char c, int x, int y, uint16_t color) {
     uint8_t fontRow = pgm_read_byte(&customFont[index][row]);
     
     for (int col = 0; col < FONT_WIDTH; col++) {
-      // Check if pixel is set
-      if (fontRow & (0x80 >> col)) {
+      // Check if pixel is set - FIXED: Reverse bit order to fix backwards text
+      if (fontRow & (0x01 << col)) {
         tft.drawPixel(x + col, y + row, color);
       }
     }

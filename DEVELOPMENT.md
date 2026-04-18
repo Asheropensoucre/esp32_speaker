@@ -180,6 +180,81 @@ src/
 
 ---
 
+## Phase 5: Button X GPIO 19 SPI Conflict Fix ✅ COMPLETE
+**Date:** 2026-04-19  
+**Status:** ✅ Complete
+
+### Problem
+Button X (GPIO 19) was experiencing:
+- Phantom presses at boot during TFT_eSPI initialization
+- No button registration after boot
+- State machine jumping to PLAYING, skipping BOOTING/PAIRING animations
+
+### Root Cause
+When TFT_eSPI library initializes the Hardware SPI bus, it defaults to using GPIO 19 as the MISO (Master In Slave Out) pin. This overwrote the INPUT_PULLUP mode set by InputManager, stripping away pull-up protection and allowing electrical noise to trigger phantom presses.
+
+### Solution: Initialization Order
+Changed setup() initialization sequence to:
+1. Initialize DisplayManager.begin() FIRST - Hijacks SPI pins including GPIO 19
+2. delay(50ms) - Let SPI bus settle
+3. Initialize InputManager.begin() SECOND - Reclaims GPIO 19 with INPUT_PULLUP
+
+This ensures GPIO 19 is properly protected with internal pull-up resistors AFTER TFT_eSPI finishes SPI setup.
+
+### Code Changes
+- **src/main.cpp:** Reordered initialization in setup() function
+- **src/InputManager.cpp:** Ensured 50ms stabilization delay and initial pin reads
+- **platformio.ini:** Added `-D TFT_MISO=-1` to disable MISO pin claim (safety measure)
+
+### Files Modified
+- `src/main.cpp` - Reordered DisplayManager before InputManager
+- `platformio.ini` - Added TFT_MISO=-1 flag
+
+### Testing Results
+✅ Button X no longer has phantom presses at boot
+✅ Button X responds correctly after boot
+✅ BOOTING and PAIRING animations display properly
+✅ All other buttons (A, B, Y) unaffected
+✅ Display rendering unaffected
+
+### Key Implementation Details
+```cpp
+// CORRECT ORDER in setup():
+displayManager.begin();              // 1. Initialize display/SPI
+displayManager.setStateManager(&stateManager);
+delay(50);                           // 2. Let SPI bus settle
+inputManager.begin();                // 3. Reclaim GPIO 19 with INPUT_PULLUP
+```
+
+```cpp
+// InputManager.begin() must have stabilization:
+void InputManager::begin() {
+    pinMode(BTN_A, INPUT_PULLUP);
+    pinMode(BTN_B, INPUT_PULLUP);
+    pinMode(BTN_X, INPUT_PULLUP);    // GPIO 19
+    pinMode(BTN_Y, INPUT_PULLUP);
+    
+    delay(50);                        // Critical: stabilize pull-ups
+    
+    lastA = digitalRead(BTN_A);      // Capture initial state
+    lastB = digitalRead(BTN_B);
+    lastX = digitalRead(BTN_X);
+    lastY = digitalRead(BTN_Y);
+}
+```
+
+### Memory Impact
+- No change to flash or RAM usage
+- Configuration change only (initialization order and one platformio.ini flag)
+
+### Lessons Learned
+1. Hardware SPI initialization has side effects on GPIO pins
+2. Library initialization order matters when pins are shared or reused
+3. Proper debouncing requires both electrical (pull-ups) AND timing (delays)
+4. Edge detection systems are sensitive to initial state capture timing
+
+---
+
 ## Hardware Configuration
 
 ### Power & Amplifier
@@ -238,7 +313,13 @@ python3 convert_sprites.py
 
 ---
 
-## Known Issues & Notes
+### Known Issues & Notes
+
+### Button X GPIO 19 SPI Conflict (FIXED in Phase 5)
+- **Issue:** TFT_eSPI Hardware SPI initialization conflicted with Button X pin
+- **Solution:** Initialize display BEFORE inputs in setup()
+- **Status:** ✅ RESOLVED - Button X now working perfectly
+- **Critical:** Do NOT initialize InputManager before DisplayManager
 
 ### Flash Memory Constraints
 - Current usage: 42.0% (1,319,641 / 3,145,728 bytes)
@@ -304,4 +385,5 @@ git commit -m "Phase 3 complete: Kawaii color palette and full animation system"
 
 ---
 
-*Last Updated: 2026-04-18*
+*Last Updated: 2026-04-19*
+*Phase 5 Complete: Button X GPIO 19 SPI Conflict resolved via initialization order*

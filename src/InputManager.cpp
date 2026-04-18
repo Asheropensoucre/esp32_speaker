@@ -7,6 +7,13 @@ void InputManager::begin() {
     pinMode(BTN_B, INPUT_PULLUP);
     pinMode(BTN_X, INPUT_PULLUP);
     pinMode(BTN_Y, INPUT_PULLUP);
+    
+    delay(50); // Let pull-up resistors stabilize
+    
+    lastA = digitalRead(BTN_A);
+    lastB = digitalRead(BTN_B);
+    lastX = digitalRead(BTN_X);
+    lastY = digitalRead(BTN_Y);
 }
 
 void InputManager::update() {

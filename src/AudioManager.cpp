@@ -46,14 +46,25 @@ void AudioManager::begin() {
     Serial.print("Bluetooth Connection State: ");
     Serial.println(state);
     if (AudioManager::instance) {
-      if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) { 
-        Serial.println("Phone CONNECTED");
-        AudioManager::instance->connected = true;
-        AudioManager::instance->playSystemSound(sound_connected, sound_connected_LENGTH); 
-      } else { 
-        Serial.println("Phone DISCONNECTED"); 
-        AudioManager::instance->connected = false;
-        AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
+      switch (state) {
+        case ESP_A2D_CONNECTION_STATE_CONNECTED: 
+          Serial.println("Phone CONNECTED");
+          AudioManager::instance->connected = true;
+          AudioManager::instance->playSystemSound(sound_connected, sound_connected_LENGTH); 
+          break; 
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTED: 
+          Serial.println("Phone DISCONNECTED"); 
+          AudioManager::instance->connected = false;
+          AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
+          break;
+        case ESP_A2D_CONNECTION_STATE_CONNECTING: 
+          Serial.println("Phone CONNECTING..."); 
+          // Don't play sound during connecting state
+          break;
+        case ESP_A2D_CONNECTION_STATE_DISCONNECTING: 
+          Serial.println("Phone DISCONNECTING..."); 
+          // Don't play sound during disconnecting state
+          break;
       }
     }
   });

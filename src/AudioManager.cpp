@@ -43,27 +43,23 @@ void AudioManager::begin() {
   
   // Set up Bluetooth connection callback
   a2dp_sink.set_on_connection_state_changed([](esp_a2d_connection_state_t state, void* param) {
-    Serial.print("Bluetooth Connection State: ");
+    Serial.print("Bluetooth Connection State Callback: ");
     Serial.println(state);
     if (AudioManager::instance) {
+      // Just update the state, let the active checking handle sounds
+      // This ensures we don't miss any state changes
+      AudioManager::instance->last_connection_state = state;
+      
       switch (state) {
         case ESP_A2D_CONNECTION_STATE_CONNECTED: 
-          Serial.println("Phone CONNECTED");
           AudioManager::instance->connected = true;
-          AudioManager::instance->playSystemSound(sound_connected, sound_connected_LENGTH); 
           break; 
         case ESP_A2D_CONNECTION_STATE_DISCONNECTED: 
-          Serial.println("Phone DISCONNECTED"); 
           AudioManager::instance->connected = false;
-          AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
           break;
         case ESP_A2D_CONNECTION_STATE_CONNECTING: 
-          Serial.println("Phone CONNECTING..."); 
-          // Don't play sound during connecting state
-          break;
         case ESP_A2D_CONNECTION_STATE_DISCONNECTING: 
-          Serial.println("Phone DISCONNECTING..."); 
-          // Don't play sound during disconnecting state
+          // Intermediate states
           break;
       }
     }
@@ -114,6 +110,10 @@ bool AudioManager::isConnected() {
   return connected;
 }
 
+void AudioManager::updateConnectionState() {
+  checkConnectionState();
+}
+
 BluetoothA2DPSink* AudioManager::getSink() {
   return &a2dp_sink;
 }
@@ -148,4 +148,45 @@ void AudioManager::playSystemSound(const unsigned char* audio_data, size_t data_
         size_t bytes_written;
         i2s_write(I2S_NUM_0, out_buf, sizeof(out_buf), &bytes_written, pdMS_TO_TICKS(10));
     }
+}
+
+// Bluetooth connection state management
+void AudioManager::checkConnectionState() {
+  esp_a2d_connection_state_t current_state = a2dp_sink.get_connection_state();
+  
+  if (current_state != last_connection_state) {
+    Serial.print("Connection state changed: ");
+    Serial.print(last_connection_state);
+    Serial.print(" -> ");
+    Serial.println(current_state);
+    
+    // Handle state transitions
+    switch (current_state) {
+      case ESP_A2D_CONNECTION_STATE_CONNECTED:
+        if (last_connection_state != ESP_A2D_CONNECTION_STATE_CONNECTED) {
+          Serial.println("Phone CONNECTED (active check)");
+          connected = true;
+          playSystemSound(sound_connected, sound_connected_LENGTH);
+        }
+        break;
+        
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTED:
+        if (last_connection_state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
+          Serial.println("Phone DISCONNECTED (active check)");
+          connected = false;
+          playSystemSound(sound_disconnected, sound_disconnected_LENGTH);
+        }
+        break;
+        
+      case ESP_A2D_CONNECTION_STATE_CONNECTING:
+        Serial.println("Phone CONNECTING...");
+        break;
+        
+      case ESP_A2D_CONNECTION_STATE_DISCONNECTING:
+        Serial.println("Phone DISCONNECTING...");
+        break;
+    }
+    
+    last_connection_state = current_state;
+  }
 }

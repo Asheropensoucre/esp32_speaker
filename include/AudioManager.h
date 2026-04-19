@@ -50,6 +50,9 @@ public:
   // Check if Bluetooth is connected
   bool isConnected();
   
+  // Check and update Bluetooth connection state (call regularly)
+  void updateConnectionState();
+  
   // Get the BluetoothA2DPSink object (for advanced usage)
   BluetoothA2DPSink* getSink();
   
@@ -68,12 +71,16 @@ private:
   // Playback state
   bool playing;
   bool connected = false;
+  esp_a2d_connection_state_t last_connection_state = ESP_A2D_CONNECTION_STATE_DISCONNECTED;
   
   // AVRCP metadata callback
   static void avrc_metadata_callback(uint8_t id, const uint8_t *text);
   
   // Static pointer to instance for callback
   static AudioManager* instance;
+  
+  // Bluetooth connection state management
+  void checkConnectionState();
 };
 
 #endif // AUDIO_MANAGER_H

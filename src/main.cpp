@@ -135,6 +135,11 @@ void loop() {
     }
   }
   
+  // Update Bluetooth connection state (check regularly)
+  if (audioManager) {
+    audioManager->updateConnectionState();
+  }
+  
   // Update animations
   unsigned long currentTime = millis();
   if (currentTime - lastAnimationUpdate >= ANIMATION_SPEED) {

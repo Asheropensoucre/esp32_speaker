@@ -61,12 +61,32 @@ void setup() {
   audioManager->start("ESP32 Potato");
   delay(500);
   
-  // Play boot sound
+  // Play boot sound and show boot animation
   audioManager->playSystemSound(sound_boot, sound_boot_LENGTH);
 
+  // Show boot animation while sound plays
+  Serial.println("Showing boot animation");
+  unsigned long bootStartTime = millis();
+  unsigned long lastBootAnimUpdate = 0;
+  
+  // Run boot animation for 2 seconds (longer than boot sound)
+  while (millis() - bootStartTime < 2000) {
+    unsigned long currentTime = millis();
+    if (currentTime - lastBootAnimUpdate >= ANIMATION_SPEED) {
+      lastBootAnimUpdate = currentTime;
+      stateManager.advanceAnimationFrame();
+      displayManager.drawFullDisplay();
+      
+      // Check if boot animation is complete
+      if (stateManager.isAnimationComplete()) {
+        Serial.println("Boot animation complete");
+        break;
+      }
+    }
+    delay(10); // Small delay to prevent watchdog timer issues
+  }
+
   // Transition to pairing state after boot
-  Serial.println("Waiting 1 second before transitioning to PAIRING state");
-  delay(1000);
   Serial.println("Transitioning to PAIRING state");
   stateManager.setState(PAIRING);
   Serial.println("Setup complete, entering main loop");
@@ -183,7 +203,7 @@ void loop() {
     int currentVol = audioManager->getVolume();
     BluetoothA2DPSink* sink = audioManager->getSink();
     
-    if (currentVol >= 120) {
+    if (currentVol >= 127) {
       // At max volume - play error sound
       audioManager->playSystemSound(sound_error, sound_error_LENGTH);
       displayManager.showOverlay("MAX VOL", COLOR_KAWAII_YELLOW);

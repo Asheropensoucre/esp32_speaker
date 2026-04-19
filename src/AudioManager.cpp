@@ -49,10 +49,11 @@ void AudioManager::begin() {
       if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) { 
         Serial.println("Phone CONNECTED");
         AudioManager::instance->connected = true;
-        AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
+        AudioManager::instance->playSystemSound(sound_connected, sound_connected_LENGTH); 
       } else { 
         Serial.println("Phone DISCONNECTED"); 
-        AudioManager::instance->connected = false; 
+        AudioManager::instance->connected = false;
+        AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
       }
     }
   });

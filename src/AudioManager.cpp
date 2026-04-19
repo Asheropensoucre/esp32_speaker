@@ -1,6 +1,8 @@
 #include "AudioManager.h"
 #include "esp_a2dp_api.h"
 #include "esp_avrc_api.h"
+#include "../test/audio_data.h"
+#include <driver/i2s.h>
 
 // Static member initialization
 AudioManager* AudioManager::instance = nullptr;
@@ -44,12 +46,13 @@ void AudioManager::begin() {
     Serial.print("Bluetooth Connection State: ");
     Serial.println(state);
     if (AudioManager::instance) {
-      if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
+      if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) { 
         Serial.println("Phone CONNECTED");
         AudioManager::instance->connected = true;
-      } else {
-        Serial.println("Phone DISCONNECTED");
-        AudioManager::instance->connected = false;
+        AudioManager::instance->playSystemSound(sound_disconnected, sound_disconnected_LENGTH); 
+      } else { 
+        Serial.println("Phone DISCONNECTED"); 
+        AudioManager::instance->connected = false; 
       }
     }
   });
@@ -114,4 +117,23 @@ void AudioManager::avrc_metadata_callback(uint8_t id, const uint8_t *text) {
       instance->displayManager->updateSongTitle((char*)text);
     }
   }
+}
+
+void AudioManager::playSystemSound(const unsigned char* audio_data, size_t data_length) {
+    int16_t* pcm = (int16_t*)audio_data;
+    size_t num_samples = data_length / 2; // 16-bit samples
+    int16_t out_buf[4]; // 2 frames of stereo [L, R, L, R]
+
+    for (size_t i = 0; i < num_samples; i++) {
+        // Duplicate Mono to Stereo, and 22.05kHz to 44.1kHz
+        // Scale volume to 5% (divide by 20)
+        int16_t scaled_sample = pcm[i] / 20;
+        out_buf[0] = scaled_sample; // Frame 1 Left
+        out_buf[1] = scaled_sample; // Frame 1 Right
+        out_buf[2] = scaled_sample; // Frame 2 Left
+        out_buf[3] = scaled_sample; // Frame 2 Right
+
+        size_t bytes_written;
+        i2s_write(I2S_NUM_0, out_buf, sizeof(out_buf), &bytes_written, pdMS_TO_TICKS(10));
+    }
 }

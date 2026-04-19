@@ -4,6 +4,7 @@
 #include "AudioManager.h"
 #include "InputManager.h"
 #include "Assets.h"
+#include "../test/audio_data.h"
 
 // Power & Amp pins
 #define BACKLIGHT_PIN 32
@@ -53,9 +54,15 @@ void setup() {
   Serial.println("Drawing initial boot screen");
   displayManager.drawFullDisplay();
 
+
+
   // Start Bluetooth A2DP sink
   Serial.println("Starting Bluetooth A2DP sink");
   audioManager->start("ESP32 Potato");
+  delay(500);
+  
+  // Play boot sound
+  audioManager->playSystemSound(sound_boot, sound_boot_LENGTH);
 
   // Transition to pairing state after boot
   Serial.println("Waiting 1 second before transitioning to PAIRING state");
@@ -102,6 +109,7 @@ void loop() {
       Serial.print(" to ");
       Serial.println(currentPhoneVolume);
       lastPhoneVolume = currentPhoneVolume;
+      displayManager.setVolume(currentPhoneVolume);
       displayManager.showOverlay("VOL SYNC", COLOR_KAWAII_YELLOW);
       displayManager.drawFullDisplay();
     }
@@ -172,10 +180,19 @@ void loop() {
   if (inputManager.isButtonAPressed() && audioManager) {
     Serial.println("Button A Pressed - Volume Up");
     // Button A: VOLUME UP - increase volume in steps of 5
+    int currentVol = audioManager->getVolume();
     BluetoothA2DPSink* sink = audioManager->getSink();
-    sink->volume_up();
-    audioManager->volumeUp();
-    displayManager.showOverlay("VOL UP", COLOR_KAWAII_YELLOW);
+    
+    if (currentVol >= 120) {
+      // At max volume - play error sound
+      audioManager->playSystemSound(sound_error, sound_error_LENGTH);
+      displayManager.showOverlay("MAX VOL", COLOR_KAWAII_YELLOW);
+    } else {
+      sink->volume_up();
+      audioManager->volumeUp();
+      displayManager.setVolume(audioManager->getVolume());
+      displayManager.showOverlay("VOL UP", COLOR_KAWAII_YELLOW);
+    }
     stateManager.triggerButtonReaction();
     displayManager.drawFullDisplay();
   }
@@ -186,6 +203,7 @@ void loop() {
     BluetoothA2DPSink* sink = audioManager->getSink();
     sink->volume_down();
     audioManager->volumeDown();
+    displayManager.setVolume(audioManager->getVolume());
     displayManager.showOverlay("VOL DN", COLOR_KAWAII_YELLOW);
     stateManager.triggerButtonReaction();
     displayManager.drawFullDisplay();

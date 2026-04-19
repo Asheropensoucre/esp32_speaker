@@ -70,14 +70,17 @@ We specifically avoid ESP32 strapping pins (like D2, D5) to prevent boot loops a
 
 ### Audio Configuration
 - Interface: I2S
-- Sample rate: 44.1kHz
+- Sample rate: 44.1kHz (Bluetooth music), 16kHz (system sounds)
 - Bit depth: 16-bit
-- Channels: Stereo
+- Channels: Stereo (Bluetooth music), Mono (system sounds)
 - Amplifier: Must be enabled (GPIO 14 HIGH)
 - Bluetooth: A2DP sink with AVRCP support
 - Connection State: Tracked via `set_on_connection_state_changed()` callback
 - Auto-Sync: Enabled only when phone is connected (guards in main loop)
 - Phone State Sync: Automatic PLAYING/PAUSED/volume sync when connected
+- System Sounds: Boot, Connected, Disconnected, Max Volume Error
+- Sound Format: Mono, 16kHz, 16-bit PCM (stored in PROGMEM)
+- Sound Playback: Temporarily hijacks I2S clock for system sounds
 
 ---
 
@@ -247,7 +250,16 @@ lib_deps =
 
 ---
 
-## Recent Changes (2026-04-18)
+## Recent Changes (2026-04-20)
+
+### Phase 4: Audio Feedback System
+- Added system sounds for boot, connect, disconnect, and max volume error
+- Implemented `playSystemSound()` method to temporarily hijack I2S for mono 16kHz playback
+- Sounds stored in `test/audio_data.h` as PROGMEM arrays (Mono, 16kHz, 16-bit PCM)
+- Boot sound plays after display initialization in setup()
+- Connected/Disconnected sounds trigger via Bluetooth connection callbacks
+- Error sound plays when volume up button pressed at max volume (>= 120)
+- I2S clock automatically restored to 44.1kHz stereo after system sound playback
 
 ### TFT_eSPI Migration
 - Migrated from Adafruit_GFX to TFT_eSPI library
@@ -272,5 +284,5 @@ lib_deps =
 
 ---
 
-*Last Updated: 2026-04-19*
-*Phase 6 Complete: Bluetooth State Machine & Phone Sync - Auto-sync now tracks phone connections*
+*Last Updated: 2026-04-20*
+*Phase 4 Complete: Audio Feedback System - System sounds for boot, connect, disconnect, and max volume error*

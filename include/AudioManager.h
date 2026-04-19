@@ -2,6 +2,7 @@
 #define AUDIO_MANAGER_H
 
 #include <Arduino.h>
+#include <driver/i2s.h>
 #include "BluetoothA2DPSink.h"
 #include "DisplayManager.h"
 
@@ -51,6 +52,9 @@ public:
   
   // Get the BluetoothA2DPSink object (for advanced usage)
   BluetoothA2DPSink* getSink();
+  
+  // Play system sound (boot, connected, disconnected, error)
+  void playSystemSound(const unsigned char* audio_data, size_t data_length);
 
 private:
   BluetoothA2DPSink a2dp_sink;

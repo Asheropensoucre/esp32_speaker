@@ -17,6 +17,8 @@ DisplayManager::DisplayManager()
   
   stateManager = nullptr;
   lastDrawnState = BOOTING;
+  currentVolume = 0;
+  volumeChanged = false;
 }
 
 void DisplayManager::begin() {
@@ -71,6 +73,13 @@ void DisplayManager::showVolume(int volume) {
   drawScreen(); // Go back to the song title!
 }
 
+void DisplayManager::setVolume(int volume) {
+  if (currentVolume != volume) {
+    currentVolume = volume;
+    volumeChanged = true;
+  }
+}
+
 const char* DisplayManager::getCurrentSongTitle() {
   return currentSong.c_str();
 }
@@ -97,11 +106,27 @@ void DisplayManager::drawHeaderZone() {
   // Draw header background
   tft.fillRect(0, 0, 240, ZONE_HEADER_HEIGHT, TFT_BLACK);
   
-  // Draw volume indicator (placeholder)
+  // Draw volume bar
+  // Volume bar dimensions
+  int barX = 5;
+  int barY = 30;  // Position below "VOL" text
+  int barWidth = 30;
+  int barHeight = 20;  // Maximum height
+  int volumeHeight = map(currentVolume, 0, 127, 0, barHeight);  // Map volume 0-127 to 0-20
+  
+  // Draw volume bar outline
+  tft.drawRect(barX, barY - barHeight, barWidth, barHeight, TFT_WHITE);
+  
+  // Draw filled volume bar (growing up from bottom)
+  if (volumeHeight > 0) {
+    tft.fillRect(barX + 1, barY - volumeHeight + 1, barWidth - 2, volumeHeight - 1, COLOR_KAWAII_YELLOW);
+  }
+  
+  // Draw "VOL" text above bar
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(1);
-  tft.setCursor(5, 5);
-  tft.print("VOL: --");
+  tft.setCursor(barX, barY - barHeight - 10);
+  tft.print("VOL");
   
   // Draw status icon (placeholder)
   tft.setCursor(200, 5);
@@ -306,6 +331,12 @@ void DisplayManager::drawFullDisplay() {
     // Redraw static elements when state changes
     drawHeaderZone();
     drawFooterZone();
+  }
+  
+  // Redraw header zone if volume has changed
+  if (volumeChanged) {
+    drawHeaderZone();
+    volumeChanged = false;
   }
   
   // Draw the animated sprite on top (every frame)

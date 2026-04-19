@@ -312,31 +312,42 @@ The screen is divided into 3 zones:
 
 ## Phase 4 Guidelines
 
-### TFT_eSPI Migration
-- Migrated from Adafruit_GFX to TFT_eSPI library
-- Removed RLE compression (using raw RGB565 arrays)
-- Configured pins via platformio.ini build_flags
-- Enabled hardware SPI for faster rendering (40MHz)
-- Added setSwapBytes(true) for correct byte order
+### Audio Feedback System
+- System sounds provide audio feedback for key events
+- Four sounds implemented: boot, connected, disconnected, and max volume error
+- Sounds stored in PROGMEM as raw PCM arrays to minimize RAM usage
+- I2S clock switching enables playback at different sample rates
 
-### Performance Improvements
-- Hardware SPI for blazing-fast sprite rendering
-- Uncompressed sprites for maximum hardware speed
-- Non-blocking button handling
-- Optimized display updates (only redraw when needed)
+### Audio Data Format
+- Format: Mono, 16kHz, 16-bit PCM
+- Storage: PROGMEM arrays in `test/audio_data.h`
+- Arrays: `sound_boot`, `sound_connected`, `sound_disconnected`, `sound_error`
+- Length variables: Each sound has corresponding `_LENGTH` constant
+- Conversion: MP3 → PCM via `convert_audio.py` using ffmpeg subprocess
 
-### Bug Fixes
-- Fixed button rapid-fire with proper edge detection
-- Fixed screen orientation with setRotation(2)
-- Fixed screen flicker with lastDrawnState tracking
-- Fixed ghost presses with 50ms stabilization delay
-- Fixed Play/Pause sync with local boolean state
-- Fixed animation step bug with resetAnimation() in setState()
+### System Sound Playback
+- Method: `AudioManager::playSystemSound(uint8_t* data, uint32_t length)`
+- I2S Configuration: Temporarily switches to 16kHz mono for system sounds
+- Restoration: Automatically restores to 44.1kHz stereo after playback
+- Non-blocking: Returns immediately, audio plays in background
+
+### Sound Triggers
+- **Boot Sound**: Plays after display initialization in `setup()`
+- **Connected Sound**: Triggers via Bluetooth connection callback (ESP_A2DP_CONNECTION_STATE_CONNECTED)
+- **Disconnected Sound**: Triggers via Bluetooth disconnection callback
+- **Error Sound**: Plays when volume up button pressed at max volume (>= 120)
+
+### Audio Conversion Script
+- Script: `convert_audio.py` in project root
+- Input: MP3 files in `test/` directory
+- Output: C header file with PROGMEM arrays
+- Method: Uses subprocess with ffmpeg (not pydub due to Python 3.14 audioop removal)
+- Command: `ffmpeg -i input.mp3 -f s16le -acodec pcm_s16le -ar 16000 -ac 1 -`
 
 ### Known Limitations
-- Bluetooth connection state transitions not automatic (protected member access issue)
-- Device stays in PAIRING state until manual state change
-- Text mirroring may still occur (CGRAM_OFFSET=1 may not be sufficient)
+- System sounds interrupt Bluetooth audio playback temporarily
+- I2S clock switching may cause brief audio artifacts
+- Sound playback is non-blocking, no completion callback provided
 
 ---
 

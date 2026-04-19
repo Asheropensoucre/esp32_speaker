@@ -72,6 +72,9 @@ public:
   // Show volume popup overlay
   void showVolume(int volume);
   
+  // Set current volume for header display
+  void setVolume(int volume);
+  
   // Get current song title
   const char* getCurrentSongTitle();
   
@@ -141,6 +144,12 @@ private:
   
   // Last drawn state (for flicker prevention)
   SystemState lastDrawnState;
+  
+  // Current volume level (0-127)
+  int currentVolume;
+  
+  // Volume change tracking flag
+  bool volumeChanged;
   
   // Helper function to draw the main screen
   void drawScreen();
